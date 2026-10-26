@@ -226,8 +226,10 @@ export function parseLog(raw: string): Commit[] {
 }
 
 /**
- * Página do histórico de todas as refs, em ordem topológica (filhos antes dos pais),
- * como o desenho do grafo exige. Pede `limit + 1` para saber se há mais páginas.
+ * Página do histórico de todas as refs, por data de commit sem nunca pôr um pai antes dos filhos
+ * (o desenho do grafo exige isso). `--date-order` intercala as branches no tempo; `--topo-order`
+ * mostraria cada linha de história inteira de uma vez e empurraria os commits mesclados para longe
+ * dos merges, abrindo dezenas de pistas paralelas. Pede `limit + 1` para saber se há mais páginas.
  */
 export async function getLog(root: string, skip: number, limit: number): Promise<LogPage> {
   if (!Number.isInteger(skip) || skip < 0) throw new RangeError("skip inválido");
@@ -238,7 +240,7 @@ export async function getLog(root: string, skip: number, limit: number): Promise
     raw = await runGit(root, [
       "log",
       "--all",
-      "--topo-order",
+      "--date-order",
       "--decorate=short",
       `--skip=${skip}`,
       `--max-count=${limit + 1}`,

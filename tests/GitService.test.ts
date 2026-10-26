@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getLog, getStatus, parseLog, parseStatusV2, resolveRepoRoot } from "../src/main/git/GitService";
+import { layoutGraph } from "../src/shared/graph/layoutGraph";
 
 const NUL = "\0";
 
@@ -86,7 +87,7 @@ describe("parseLog", () => {
 describe("integração com git real", () => {
   let dir: string;
 
-  const git = (...args: string[]) =>
+  const gitEnv = (env: Record<string, string>, ...args: string[]) =>
     execFileSync("git", args, {
       cwd: dir,
       encoding: "utf8",
@@ -96,8 +97,30 @@ describe("integração com git real", () => {
         GIT_AUTHOR_EMAIL: "t@example.com",
         GIT_COMMITTER_NAME: "Teste",
         GIT_COMMITTER_EMAIL: "t@example.com",
+        ...env,
       },
     });
+  const git = (...args: string[]) => gitEnv({}, ...args);
+  /** Commit vazio com data fixa (minutos depois de uma base), para controlar a ordem cronológica. */
+  const commitAt = (minute: number, ...args: string[]) => {
+    const date = `@${1767225600 + minute * 60} +0000`;
+    gitEnv({ GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date }, ...args);
+  };
+  const subjects = (commits: { subject: string }[]) => commits.map((c) => c.subject);
+  /** Duas branches com commits intercalados no tempo, mescladas no fim. */
+  const interleaved = () => {
+    commitAt(0, "commit", "--allow-empty", "-m", "base");
+    git("branch", "b");
+    commitAt(1, "commit", "--allow-empty", "-m", "a1");
+    git("checkout", "-q", "b");
+    commitAt(2, "commit", "--allow-empty", "-m", "b1");
+    git("checkout", "-q", "main");
+    commitAt(3, "commit", "--allow-empty", "-m", "a2");
+    git("checkout", "-q", "b");
+    commitAt(4, "commit", "--allow-empty", "-m", "b2");
+    git("checkout", "-q", "main");
+    commitAt(5, "merge", "--no-ff", "b", "-m", "merge b");
+  };
 
   beforeEach(() => {
     // Nome longo: no CI o TEMP vem em formato 8.3 (RUNNER~1) e o git devolve o caminho expandido.
@@ -131,7 +154,29 @@ describe("integração com git real", () => {
     expect(byPath["sub dir/novo.txt"]).toMatchObject({ untracked: true });
   });
 
-  it("log pagina em ordem topológica e informa hasMore", async () => {
+  it("log intercala as branches por data, sem pai antes dos filhos", async () => {
+    interleaved();
+    // commit com data anterior à do pai (relógio atrasado) continua acima dele
+    commitAt(-10, "commit", "--allow-empty", "-m", "relógio atrasado");
+
+    const { commits } = await getLog(dir, 0, 50);
+
+    expect(subjects(commits)).toEqual(["relógio atrasado", "merge b", "b2", "a2", "b1", "a1", "base"]);
+  });
+
+  it("páginas concatenadas reproduzem o log completo e o mesmo layout", async () => {
+    interleaved();
+    const full = (await getLog(dir, 0, 50)).commits;
+    const pages = [...(await getLog(dir, 0, 3)).commits, ...(await getLog(dir, 3, 3)).commits, ...(await getLog(dir, 6, 3)).commits];
+    expect(subjects(pages)).toEqual(subjects(full));
+
+    const whole = layoutGraph(full);
+    const first = layoutGraph(pages.slice(0, 3));
+    const rest = layoutGraph(pages.slice(3), first.state);
+    expect([...first.rows, ...rest.rows]).toEqual(whole.rows);
+  });
+
+  it("log pagina do mais novo para o mais antigo e informa hasMore", async () => {
     for (const n of ["c1", "c2", "c3"]) {
       writeFileSync(join(dir, `${n}.txt`), n);
       git("add", ".");

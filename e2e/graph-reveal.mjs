@@ -24,10 +24,10 @@ const filter = win.getByLabel("Pesquisar branches");
 const branchButton = (name) => win.locator(".left li.ref .ref-name").filter({ hasText: name }).first();
 const geometry = () => scroller.evaluate((el) => ({ top: el.scrollTop, view: el.clientHeight }));
 
-// a linha do commit de HEAD (índice no `git log --all --topo-order`, sem linha WIP porque a árvore está limpa)
+// a linha do commit de HEAD (índice no `git log --all --date-order`, sem linha WIP porque a árvore está limpa)
 const rowOfHead = () => {
   const head = git(sb.work, "rev-parse", "HEAD").trim();
-  return git(sb.work, "log", "--all", "--topo-order", "--format=%H").split("\n").indexOf(head);
+  return git(sb.work, "log", "--all", "--date-order", "--format=%H").split("\n").indexOf(head);
 };
 
 check("o grafo começa no topo", (await geometry()).top === 0);

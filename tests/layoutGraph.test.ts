@@ -34,6 +34,18 @@ function randomDag(n: number, seed: number): C[] {
 }
 
 describe("layoutGraph", () => {
+  it("merges seguidos de branches curtas, em ordem de data, usam no máximo 2 pistas", () => {
+    // stage recebe F1..F10, cada uma criada a partir da ponta anterior de stage
+    const commits: C[] = [];
+    for (let k = 10; k >= 1; k--) commits.push(c(`M${k}`, k > 1 ? `M${k - 1}` : "S0", `F${k}`), c(`F${k}`, k > 1 ? `M${k - 1}` : "S0"));
+    commits.push(c("S0"));
+
+    const { rows, state } = layoutGraph(commits);
+
+    expect(state.maxLane).toBeLessThanOrEqual(1);
+    expect(rows.filter((r) => r.hash.startsWith("F")).every((r) => r.lane === 1)).toBe(true);
+  });
+
   it("histórico linear usa uma única pista, sem cruzamentos", () => {
     const { rows } = layoutGraph([c("c3", "c2"), c("c2", "c1"), c("c1")]);
 

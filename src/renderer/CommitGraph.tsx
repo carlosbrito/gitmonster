@@ -79,10 +79,12 @@ interface Theme {
   dim: string;
   line: string;
   chipTextOnColor: string;
+  /** Alfa (hex de 2 dígitos) do fundo de cada linha na cor da pista. */
+  laneTint: string;
 }
 
-const LIGHT: Theme = { bg: "#ffffff", rowAlt: "#f7f8fa", selected: "#dbeafe", text: "#1c2430", dim: "#6b7685", line: "#e1e5ea", chipTextOnColor: "#0b1220" };
-const DARK: Theme = { bg: "#12161c", rowAlt: "#161b22", selected: "#1f3a5f", text: "#e6edf3", dim: "#8b97a6", line: "#262d36", chipTextOnColor: "#0b1220" };
+const LIGHT: Theme = { bg: "#ffffff", rowAlt: "#f7f8fa", selected: "#dbeafe", text: "#1c2430", dim: "#6b7685", line: "#e1e5ea", chipTextOnColor: "#0b1220", laneTint: "14" };
+const DARK: Theme = { bg: "#12161c", rowAlt: "#161b22", selected: "#1f3a5f", text: "#e6edf3", dim: "#8b97a6", line: "#262d36", chipTextOnColor: "#0b1220", laneTint: "1c" };
 
 /** Largura da coluna do grafo: limitada para o texto nunca sair da tela, mesmo com centenas de pistas. */
 function graphWidth(maxLane: number, total: number, refW: number, userW: number | null): number {
@@ -273,6 +275,12 @@ export function CommitGraph(props: CommitGraphProps) {
         ctx.fillStyle = theme.rowAlt;
         ctx.fillRect(0, y0, w, ROW_H);
       }
+      // fundo suave na cor da pista, do nó até o fim da mensagem (a seleção prevalece)
+      if (!isWip && !selected) {
+        const tintX = Math.min(gx0 + gW, x(row!.lane));
+        ctx.fillStyle = withAlpha(colorOf(row!.color), theme.laneTint);
+        ctx.fillRect(tintX, y0, w - tintX, ROW_H);
+      }
       if (pulseNow && pulseNow.di === di && pulseNow.alpha > 0) {
         ctx.fillStyle = withAlpha(PULSE_COLOR, Math.round(pulseNow.alpha * 255).toString(16).padStart(2, "0"));
         ctx.fillRect(0, y0, w, ROW_H);
@@ -440,16 +448,13 @@ export function CommitGraph(props: CommitGraphProps) {
         else ctx.bezierCurveTo(x(lane), y1, x(out.lane), mid, x(out.lane), y1);
         ctx.stroke();
       }
-      // nó: avatar do autor com anel na cor da pista; merge (2+ pais) é um ponto pequeno; HEAD ganha um halo
+      // nó: avatar do autor com anel na cor da pista; merge (2+ pais) é um ponto cheio pequeno; HEAD ganha um halo
       const isMerge = commit!.parents.length > 1;
       if (isMerge) {
-        ctx.fillStyle = theme.bg;
-        ctx.strokeStyle = laneColor;
-        ctx.lineWidth = 2;
+        ctx.fillStyle = laneColor;
         ctx.beginPath();
-        ctx.arc(x(lane), mid, 4, 0, Math.PI * 2);
+        ctx.arc(x(lane), mid, 4.5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
       } else {
         ctx.fillStyle = PALETTE[hashIndex(commit!.authorEmail || commit!.authorName, PALETTE.length)]!;
         ctx.strokeStyle = laneColor;

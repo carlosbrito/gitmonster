@@ -145,7 +145,7 @@ export const waitIdle = async (win) => {
  * linha "// WIP" logo acima do commit de HEAD, o que desloca os commits dali para baixo uma linha.
  */
 export async function graphPoint(win, repo, hash) {
-  const order = git(repo, "log", "--all", "--topo-order", "--format=%H").trim().split("\n");
+  const order = git(repo, "log", "--all", "--date-order", "--format=%H").trim().split("\n");
   let index = order.indexOf(hash);
   if (index < 0) throw new Error(`commit fora do grafo: ${hash}`);
   if (git(repo, "status", "--porcelain").trim() !== "") {
