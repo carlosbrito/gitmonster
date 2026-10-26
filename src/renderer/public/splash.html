@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'"
+    />
+    <title>GitMonster</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #050505;
+        overflow: hidden;
+        -webkit-app-region: drag;
+        user-select: none;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+      }
+      img {
+        width: 400px;
+        height: auto;
+        display: block;
+      }
+      .bar {
+        width: 320px;
+        height: 3px;
+        border-radius: 2px;
+        background: #1a1a1a;
+        overflow: hidden;
+      }
+      .bar > i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: #7cff2b;
+        transform-origin: left;
+        transform: scaleX(0);
+        animation: fill 5s linear forwards;
+      }
+      @keyframes fill {
+        to {
+          transform: scaleX(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <img src="splash-logo.png" alt="GitMonster — Unleash your commits" />
+    <div class="bar"><i></i></div>
+  </body>
+</html>

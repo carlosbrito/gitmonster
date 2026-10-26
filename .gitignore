@@ -1,0 +1,43 @@
+# Dependências
+node_modules/
+
+# Build e artefatos
+out/
+dist/
+dist-ssr/
+release/
+*.tsbuildinfo
+
+# Testes e cobertura
+.vitest/
+coverage/
+test-results/
+playwright-report/
+e2e/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Variáveis de ambiente / segredos
+.env
+.env.*
+!.env.example
+*.local
+
+# Editores e IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+Desktop.ini

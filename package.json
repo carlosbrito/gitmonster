@@ -1,0 +1,81 @@
+{
+  "name": "gitmonster",
+  "productName": "GitMonster",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitMonster: cliente Git desktop local (Windows) com grafo de commits",
+  "main": "out/main/index.js",
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "npm run build && node e2e/run.mjs",
+    "test:packaged": "npm run dist:dir && node e2e/packaged.mjs",
+    "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "dist:dir": "npm run build && electron-builder --win dir --x64 --publish never",
+    "brand": "pwsh -NoProfile -File tools/make-brand-assets.ps1",
+    "stats": "node tools/release-stats.mjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.7.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "highlight.js": "^11.12.0",
+    "playwright-core": "^1.64.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7",
+    "vitest": "^5.0.4"
+  },
+  "author": "GitMonster",
+  "build": {
+    "appId": "br.gitmonster.app",
+    "productName": "GitMonster",
+    "copyright": "GitMonster",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "GitMonster-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "carlosbrito",
+        "repo": "gitmonster-releases",
+        "releaseType": "draft"
+      }
+    ]
+  }
+}

@@ -1,0 +1,78 @@
+# Publica uma versão: tag v<versão> → testes → instalador Windows → rascunho de Release no repositório público.
+# Fluxo: `npm version patch|minor` → `git push --follow-tags` → revisar e publicar o rascunho em gitmonster-releases.
+# Disparo manual (workflow_dispatch) é um ensaio: testa e empacota, mas nunca publica.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Tag igual à versão do package.json
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::A tag $GITHUB_REF_NAME não corresponde à versão $version do package.json"
+            exit 1
+          fi
+
+      - name: Token de publicação válido
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "::warning::RELEASES_TOKEN ausente ou vazio"; exit 0; fi
+          # Prova de escrita sem efeito visível: cria um rascunho de release e apaga em seguida.
+          api=https://api.github.com/repos/carlosbrito/gitmonster-releases/releases
+          id="$(curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -d '{"tag_name":"token-check","name":"token-check","draft":true}' "$api" | node -p "JSON.parse(require('fs').readFileSync(0)).id")" \
+            || { echo "::error::RELEASES_TOKEN não consegue criar releases em gitmonster-releases"; exit 1; }
+          curl -fsS -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$api/$id"
+          echo "RELEASES_TOKEN pode publicar em gitmonster-releases."
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Build e publicação (rascunho em carlosbrito/gitmonster-releases)
+        shell: bash
+        run: |
+          npm run build
+          if [ "$GITHUB_EVENT_NAME" != "push" ]; then
+            echo "Ensaio manual: só empacota, sem publicar."
+            npx electron-builder --win nsis --x64 --publish never
+          elif [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Segredo RELEASES_TOKEN ausente: só empacota, sem publicar."
+            npx electron-builder --win nsis --x64 --publish never
+          else
+            npx electron-builder --win nsis --x64 --publish always
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+
+      - name: Resumo
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          {
+            echo "### Rascunho criado: $GITHUB_REF_NAME"
+            echo ""
+            echo "Revise e publique em https://github.com/carlosbrito/gitmonster-releases/releases"
+            echo "Só depois de publicado os apps instalados recebem o aviso de atualização."
+          } >> "$GITHUB_STEP_SUMMARY"
