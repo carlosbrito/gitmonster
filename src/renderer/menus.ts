@@ -1,9 +1,10 @@
-import type { Commit, CommitFile, DiffTarget, FileChange } from "../shared/types";
+import type { Commit, CommitFile, DiffTarget, FileChange, RefsSnapshot } from "../shared/types";
 import type { branchActions } from "./actions/branchActions";
 import type { commitActions } from "./actions/commitActions";
 import type { discardActions } from "./actions/discardActions";
 import type { remoteActions } from "./actions/remoteActions";
 import type { MenuEntry } from "./ContextMenu";
+import type { Chip } from "./graphModel";
 import type { SidebarTarget } from "./Sidebar";
 import { short } from "./util";
 
@@ -66,6 +67,30 @@ function mergeEntries(name: string, current: string | null, a: MenuActions): Men
     { label: `Fazer merge da branch ${name} na branch ${current}`, onSelect: () => a.branches.merge(name) },
     { label: `Fazer rebase da branch ${current} em cima de ${name}`, onSelect: () => a.branches.rebase(name) },
   ];
+}
+
+/**
+ * Etiqueta do grafo → o mesmo alvo do menu da sidebar, para o botão direito nela oferecer as mesmas ações.
+ * `null` (etiqueta HEAD ou ref que não existe mais): vale o menu do commit.
+ */
+export function chipTarget(chip: Pick<Chip, "name" | "kind">, refs: RefsSnapshot | null): SidebarTarget | null {
+  if (!refs) return null;
+  switch (chip.kind) {
+    case "local": {
+      const branch = refs.branches.find((b) => b.name === chip.name);
+      return branch ? { kind: "branch", branch } : null;
+    }
+    case "remote": {
+      const branch = refs.remoteBranches.find((b) => b.name === chip.name);
+      return branch ? { kind: "remote", branch } : null;
+    }
+    case "tag": {
+      const tag = refs.tags.find((t) => t.name === chip.name);
+      return tag ? { kind: "tag", tag } : null;
+    }
+    case "head":
+      return null;
+  }
 }
 
 /** `current`: branch atual (null com HEAD destacado), usada nos textos de merge e rebase. */

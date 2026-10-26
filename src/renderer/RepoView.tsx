@@ -23,7 +23,7 @@ import { useRepoState } from "./hooks/useRepoState";
 import { useStoredSize } from "./hooks/useStoredSize";
 import { clampPanel, MIN_CENTER_W } from "./panelSize";
 import { Splitter } from "./Splitter";
-import { commitFileMenu, commitMenu, fileMenu, sidebarMenu, type MenuActions } from "./menus";
+import { chipTarget, commitFileMenu, commitMenu, fileMenu, sidebarMenu, type MenuActions } from "./menus";
 import { RepoToolbar } from "./RepoToolbar";
 import { SearchBar } from "./SearchBar";
 import { SearchResults } from "./SearchResults";
@@ -290,7 +290,10 @@ export function RepoView({ root, active, onOpenSettings, settingsRev, repoChoice
             onSelectWip={() => s.setSelected(null)}
             onBranchDrop={onBranchDrop}
             onCheckout={branches.checkout}
-            onContextMenu={(commit, point) => contextMenu.open(point, commitMenu(commit, menuActions))}
+            onContextMenu={(commit, point, chip) => {
+              const target = chip ? chipTarget(chip, s.refs) : null;
+              contextMenu.open(point, target ? sidebarMenu(target, menuActions, status?.branch ?? null) : commitMenu(commit, menuActions));
+            }}
             onLoadMore={() => void s.loadMore()}
             onDragTarget={(source, over) => setGraphDrag(source ? { source, over } : null)}
             reveal={s.reveal}

@@ -131,8 +131,8 @@ export interface CommitGraphProps {
   onSelect(commit: Commit): void;
   /** Clique na linha WIP. */
   onSelectWip(): void;
-  /** Botão direito numa linha (o commit já foi selecionado). */
-  onContextMenu(commit: Commit, point: { x: number; y: number }): void;
+  /** Botão direito numa linha (o commit já foi selecionado); `chip`: etiqueta sob o ponteiro, se houver. */
+  onContextMenu(commit: Commit, point: { x: number; y: number }, chip?: Pick<Chip, "name" | "kind">): void;
   /** Uma branch foi arrastada do grafo e solta sobre outra branch local. */
   onBranchDrop(source: string, target: string): void;
   /** Duplo clique numa etiqueta de branch (local ou remota). */
@@ -432,20 +432,21 @@ export function CommitGraph(props: CommitGraphProps) {
         ctx.lineTo(x(t.lane), y1);
         ctx.stroke();
       }
+      // troca de pista em ângulo reto: vertical pela pista e horizontal na altura do nó, sem curvas
       for (const inc of row!.incoming) {
         ctx.strokeStyle = colorOf(inc.color);
         ctx.beginPath();
         ctx.moveTo(x(inc.lane), y0);
-        if (inc.lane === lane) ctx.lineTo(x(lane), mid);
-        else ctx.bezierCurveTo(x(inc.lane), mid, x(lane), y0, x(lane), mid);
+        ctx.lineTo(x(inc.lane), mid);
+        ctx.lineTo(x(lane), mid);
         ctx.stroke();
       }
       for (const out of row!.outgoing) {
         ctx.strokeStyle = colorOf(out.color);
         ctx.beginPath();
         ctx.moveTo(x(lane), mid);
-        if (out.lane === lane) ctx.lineTo(x(out.lane), y1);
-        else ctx.bezierCurveTo(x(lane), y1, x(out.lane), mid, x(out.lane), y1);
+        ctx.lineTo(x(out.lane), mid);
+        ctx.lineTo(x(out.lane), y1);
         ctx.stroke();
       }
       // nó: avatar do autor com anel na cor da pista; merge (2+ pais) é um ponto cheio pequeno; HEAD ganha um halo
@@ -719,7 +720,8 @@ export function CommitGraph(props: CommitGraphProps) {
     const commit = latest.current.commits[i];
     if (!commit) return;
     onSelect(commit);
-    onContextMenu(commit, { x: e.clientX, y: e.clientY });
+    const chip = chipAt(localPoint(e));
+    onContextMenu(commit, { x: e.clientX, y: e.clientY }, chip && { name: chip.name, kind: chip.kind });
   };
 
   const total = displayCount * ROW_H;

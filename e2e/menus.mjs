@@ -38,6 +38,20 @@ await menu.waitFor();
 check("no menu de branch remota o item não aparece", (await item("Abrir pasta do projeto").count()) === 0);
 await win.keyboard.press("Escape");
 
+// etiqueta da branch no grafo: o mesmo menu da sidebar (a etiqueta começa no canto esquerdo da linha)
+const featureTip = git(sb.work, "rev-parse", "feature").trim();
+const tip = await graphPoint(win, sb.work, featureTip);
+const box = await win.locator(".graph-scroll").boundingBox();
+await win.mouse.click(box.x + 20, tip.y, { button: "right" });
+await menu.waitFor();
+check("botão direito na etiqueta do grafo oferece o merge na branch atual", (await item("Fazer merge da branch feature na branch main").count()) === 1 && (await item("Fazer rebase da branch main em cima de feature").count()) === 1);
+check("o menu da etiqueta não é o menu do commit", (await item(/Cherry-pick/).count()) === 0);
+await win.keyboard.press("Escape");
+await win.mouse.click(tip.x, tip.y, { button: "right" });
+await menu.waitFor();
+check("fora da etiqueta, a mesma linha abre o menu do commit", (await item(/Cherry-pick/).count()) === 1 && (await item(/Fazer merge/).count()) === 0);
+await win.keyboard.press("Escape");
+
 await refRow(win, "feature").click({ button: "right" });
 check("o menu diz qual branch entra em qual", (await item("Fazer merge da branch feature na branch main").count()) === 1 && (await item("Fazer rebase da branch main em cima de feature").count()) === 1);
 await item("Fazer merge da branch feature na branch main").click();

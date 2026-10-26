@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MenuEntry } from "../src/renderer/ContextMenu";
-import { sidebarMenu, type MenuActions } from "../src/renderer/menus";
-import type { BranchInfo, RemoteBranchInfo } from "../src/shared/types";
+import { chipTarget, sidebarMenu, type MenuActions } from "../src/renderer/menus";
+import type { BranchInfo, RefsSnapshot, RemoteBranchInfo } from "../src/shared/types";
 
 /** Ações falsas: registram o que foi pedido. */
 function fakeActions() {
@@ -44,5 +44,53 @@ describe("sidebarMenu: merge e rebase com os nomes", () => {
     const merge = items.find((e) => "label" in e && e.label.startsWith("Fazer merge")) as Extract<MenuEntry, { label: string }>;
     expect(merge.label).toMatch(/HEAD destacado/);
     expect(merge.disabled).toBe(true);
+  });
+});
+
+describe("chipTarget: etiqueta do grafo vira o alvo do menu da sidebar", () => {
+  const refs: RefsSnapshot = {
+    remotes: [],
+    branches: [local("master", true), local("feature")],
+    remoteBranches: [remote("origin/Release/Master/26-10-2026")],
+    tags: [{ name: "v1", hash: "c" }],
+    stashes: [],
+  };
+
+  it("branch local abre o menu da sidebar com o merge na branch atual", () => {
+    const { a, calls } = fakeActions();
+    const target = chipTarget({ name: "feature", kind: "local" }, refs);
+    expect(target).toEqual({ kind: "branch", branch: refs.branches[1] });
+    const items = sidebarMenu(target!, a, "master");
+    entry(items, "Fazer merge da branch feature na branch master").onSelect();
+    expect(calls).toEqual(["branches.merge(feature)"]);
+  });
+
+  it("branch remota abre o menu da remota", () => {
+    const { a } = fakeActions();
+    const target = chipTarget({ name: "origin/Release/Master/26-10-2026", kind: "remote" }, refs);
+    expect(target?.kind).toBe("remote");
+    const items = labels(sidebarMenu(target!, a, "master"));
+    expect(items).toContain("Checkout (cria branch local)");
+    expect(items).toContain("Fazer merge da branch origin/Release/Master/26-10-2026 na branch master");
+    expect(items).toContain("Fazer rebase da branch master em cima de origin/Release/Master/26-10-2026");
+  });
+
+  it("tag abre o menu de tag", () => {
+    const { a } = fakeActions();
+    const target = chipTarget({ name: "v1", kind: "tag" }, refs);
+    expect(labels(sidebarMenu(target!, a, "master"))).toContain("Publicar no remoto");
+  });
+
+  it("HEAD destacado deixa o merge da etiqueta desabilitado", () => {
+    const { a } = fakeActions();
+    const items = sidebarMenu(chipTarget({ name: "feature", kind: "local" }, refs)!, a, null);
+    const merge = entry(items, "Fazer merge da branch feature (sem branch atual: HEAD destacado)");
+    expect(merge.disabled).toBe(true);
+  });
+
+  it("etiqueta HEAD, ref ausente ou sem refs: menu do commit", () => {
+    expect(chipTarget({ name: "HEAD", kind: "head" }, refs)).toBeNull();
+    expect(chipTarget({ name: "sumiu", kind: "local" }, refs)).toBeNull();
+    expect(chipTarget({ name: "feature", kind: "local" }, null)).toBeNull();
   });
 });
