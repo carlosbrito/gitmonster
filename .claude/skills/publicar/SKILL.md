@@ -12,7 +12,7 @@ Fluxo: `npm version` → `git push --follow-tags` → workflow `release` (testes
 versão nova (verificam ao abrir e a cada 6 h).
 
 Repositórios:
-- Código (privado): `carlosbrito/gitmonster` — workflow `.github/workflows/release.yml`, segredo `RELEASES_TOKEN`.
+- Código (público): `carlosbrito/gitmonster` — workflow `.github/workflows/release.yml`, segredo `RELEASES_TOKEN`.
 - Releases (público): `carlosbrito/gitmonster-releases` — instalador, `.blockmap` e `latest.yml`.
 
 Fale com o usuário em português. Pare e explique quando qualquer passo falhar; não tente contornar.
@@ -71,12 +71,29 @@ remota e refazer).
 
 ## 5. Revisar o rascunho
 
+Liste **todos** os releases da tag (o `gh release view` mostra só um, e pode haver rascunhos duplicados):
+
 ```bash
-gh release view vX.Y.Z -R carlosbrito/gitmonster-releases --json isDraft,name,assets -q '{draft: .isDraft, assets: [.assets[].name]}'
+gh api repos/carlosbrito/gitmonster-releases/releases --jq '.[] | select(.tag_name=="vX.Y.Z") | "\(.id) draft=\(.draft) \([.assets[] | .name] | join(","))"'
 ```
 
-Precisa ser rascunho com os três arquivos: `GitMonster-Setup-X.Y.Z.exe`, `GitMonster-Setup-X.Y.Z.exe.blockmap` e
-`latest.yml`. Aplique as notas e o título:
+Precisa haver um único rascunho com os três arquivos: `GitMonster-Setup-X.Y.Z.exe`,
+`GitMonster-Setup-X.Y.Z.exe.blockmap` e `latest.yml`.
+
+Se o envio paralelo do electron-builder tiver espalhado os arquivos em mais de um rascunho (o workflow já cria o
+rascunho antes para evitar isso), junte-os no rascunho que tem o `.exe`. Rascunhos não são vistos pelos usuários,
+então isto é seguro. Para cada arquivo que estiver em outro rascunho:
+
+```bash
+gh api -H "Accept: application/octet-stream" repos/carlosbrito/gitmonster-releases/releases/assets/<asset_id> > <arquivo>
+gh api -X POST -H "Content-Type: application/octet-stream" --input <arquivo> \
+  "https://uploads.github.com/repos/carlosbrito/gitmonster-releases/releases/<id_principal>/assets?name=<arquivo>"
+```
+
+Depois apague o rascunho que sobrou (`gh api -X DELETE repos/carlosbrito/gitmonster-releases/releases/<id_extra>`) e
+liste de novo para conferir. Nunca apague um release que não seja rascunho.
+
+Aplique as notas e o título:
 
 ```bash
 gh release edit vX.Y.Z -R carlosbrito/gitmonster-releases --title "GitMonster X.Y.Z" --notes-file <notas>

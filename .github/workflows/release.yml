@@ -61,6 +61,13 @@ jobs:
             echo "::warning::Segredo RELEASES_TOKEN ausente: só empacota, sem publicar."
             npx electron-builder --win nsis --x64 --publish never
           else
+            # Cria o rascunho antes do envio: sem ele, o electron-builder sobe os arquivos em paralelo e cada upload
+            # pode criar o próprio rascunho da mesma tag (o .blockmap já foi parar num rascunho separado).
+            api=https://api.github.com/repos/carlosbrito/gitmonster-releases/releases
+            existing="$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" "$api?per_page=100" | node -p "JSON.parse(require('fs').readFileSync(0)).filter((r) => r.tag_name === process.argv[1]).length" "$GITHUB_REF_NAME")"
+            if [ "$existing" = "0" ]; then
+              curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -d "{\"tag_name\":\"$GITHUB_REF_NAME\",\"name\":\"${GITHUB_REF_NAME#v}\",\"draft\":true}" "$api" > /dev/null
+            fi
             npx electron-builder --win nsis --x64 --publish always
           fi
         env:
