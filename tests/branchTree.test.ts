@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBranchTree, type BranchFolder, type BranchNode } from "../src/renderer/branchTree";
+import { buildBranchTree, folderPaths, type BranchFolder, type BranchNode } from "../src/renderer/branchTree";
 import { shortRemoteName } from "../src/renderer/branchFilter";
 import type { RemoteBranchInfo } from "../src/shared/types";
 
@@ -34,5 +34,15 @@ describe("buildBranchTree", () => {
     expect(nodes[0]).toMatchObject({ kind: "folder", name: "51758", path: "51758" });
     const leaf = ((nodes[0] as BranchFolder<RemoteBranchInfo>).children[0] as BranchFolder<RemoteBranchInfo>).children[0];
     expect(leaf).toEqual({ kind: "leaf", name: "RiscoSacado", item: r });
+  });
+});
+
+describe("folderPaths", () => {
+  it("lista sem pastas devolve vazio", () => {
+    expect(folderPaths(tree(["main", "dev"]))).toEqual([]);
+  });
+
+  it("devolve o caminho de toda pasta, em qualquer nível", () => {
+    expect(folderPaths(tree(["Bug/55042/x", "Bug/55043/y", "Feature/z", "main"]))).toEqual(["Bug", "Bug/55042", "Bug/55043", "Feature"]);
   });
 });

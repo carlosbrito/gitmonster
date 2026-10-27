@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { filterRefs, shortRemoteName } from "./branchFilter";
-import { buildBranchTree } from "./branchTree";
+import { buildBranchTree, folderPaths } from "./branchTree";
 import { Icon } from "./icons";
 import { BranchTree } from "./sidebar/BranchTree";
 import { RefRow } from "./sidebar/RefRow";
@@ -135,8 +135,18 @@ export function Sidebar({ refs, busy, onCheckout, onMerge, onRebase, onPushTag, 
       if (!next.delete(name)) next.add(name);
       return next;
     });
+  /** Recolhe (adiciona) ou expande (remove) um lote de chaves numa só atualização. */
+  const setMany = (keys: string[], collapse: boolean) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      for (const key of keys) {
+        if (collapse) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
 
-  const menu = (e: React.MouseEvent, target: SidebarTarget) => {
+  const menu =(e: React.MouseEvent, target: SidebarTarget) => {
     e.preventDefault();
     onMenu({ x: e.clientX, y: e.clientY }, target);
   };
@@ -184,6 +194,26 @@ export function Sidebar({ refs, busy, onCheckout, onMerge, onRebase, onPushTag, 
         Apagar selecionadas ({count})
       </button>
     );
+  // Chaves que "Expandir/Recolher tudo" alteram; sem filtro as árvores já cobrem todas as branches.
+  const localKeys = folderPaths(localTree).map((path) => `folder:local:${path}`);
+  const remoteKeys = refs.remotes.flatMap((remote) => [
+    `remote:${remote.name}`,
+    ...folderPaths(remoteTrees.get(remote.name) ?? []).map((path) => `folder:remote:${remote.name}:${path}`),
+  ]);
+  /** "Expandir tudo" abre também a seção; "Recolher tudo" só fecha o que está dentro dela. */
+  const expandCollapse = (section: string, keys: string[]) => {
+    const disabled = filtering || keys.length === 0;
+    return (
+      <>
+        <button className="mini" disabled={disabled} title="Expandir tudo" aria-label="Expandir tudo" onClick={() => setMany([...keys, `section:${section}`], false)}>
+          <Icon name="expandAll" size={14} />
+        </button>
+        <button className="mini" disabled={disabled} title="Recolher tudo" aria-label="Recolher tudo" onClick={() => setMany(keys, true)}>
+          <Icon name="collapseAll" size={14} />
+        </button>
+      </>
+    );
+  };
   const mergeActions = (name: string) => (
     <>
       <button className="mini" disabled={busy} title="Fazer merge desta branch na atual" onClick={() => onMerge(name)}>
@@ -244,7 +274,8 @@ export function Sidebar({ refs, busy, onCheckout, onMerge, onRebase, onPushTag, 
           hint="Arraste uma branch sobre outra para fazer merge"
           onToggle={() => toggle("section:local")}
         >
-          {selectAll(selectable, chosenLocal, () => setSelLocal(toggleAll(selLocal, selectable)), "Selecionar todas as branches locais")}
+          {expandCollapse("local", localKeys)}
+          {selectAll(selectable, chosenLocal,() => setSelLocal(toggleAll(selLocal, selectable)), "Selecionar todas as branches locais")}
           {deleteSelected(chosenLocal.length, async () => {
             if (await onDeleteMany(chosenLocal)) setSelLocal(new Set());
           })}
@@ -300,6 +331,7 @@ export function Sidebar({ refs, busy, onCheckout, onMerge, onRebase, onPushTag, 
 
       <section className="sb-section sb-remote" aria-label="Branches remotas">
         <SectionHeader icon="globe" title="REMOTE" count={ratio(filtered.remoteBranches.length, refs.remoteBranches.length)} open={remoteOpen} locked={filtering} onToggle={() => toggle("section:remote")}>
+          {expandCollapse("remote", remoteKeys)}
           <button className="mini" disabled={busy} title="Adicionar remote" aria-label="Adicionar remote" onClick={onAddRemote}>
             <Icon name="plus" size={14} />
           </button>

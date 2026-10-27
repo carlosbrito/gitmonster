@@ -47,3 +47,8 @@ function sortNodes<T>(nodes: BranchNode<T>[]): BranchNode<T>[] {
   for (const f of folders) f.children = sortNodes(f.children);
   return [...folders, ...leaves];
 }
+
+/** Caminho de toda pasta da árvore, em qualquer nível (pai antes dos filhos). */
+export function folderPaths<T>(nodes: readonly BranchNode<T>[]): string[] {
+  return nodes.flatMap((n) => (n.kind === "folder" ? [n.path, ...folderPaths(n.children)] : []));
+}

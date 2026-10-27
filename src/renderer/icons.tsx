@@ -152,6 +152,18 @@ const PATHS = {
       <path d="M6 16h12" />
     </>
   ),
+  expandAll: (
+    <>
+      <path d="M7 6l5 5 5-5" />
+      <path d="M7 13l5 5 5-5" />
+    </>
+  ),
+  collapseAll: (
+    <>
+      <path d="M7 11l5-5 5 5" />
+      <path d="M7 18l5-5 5 5" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;
