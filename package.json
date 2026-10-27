@@ -1,7 +1,7 @@
 {
   "name": "gitmonster",
   "productName": "GitMonster",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "GitMonster: cliente Git desktop local (Windows) com grafo de commits",
   "main": "out/main/index.js",
