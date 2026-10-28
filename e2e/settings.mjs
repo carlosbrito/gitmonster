@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checker, commitFile, fwd, git, identity, launchApp, openRepoTab, sandbox, until } from "./helpers.mjs";
+import { checker, commitFile, fwd, git, identity, launchApp, openRepoTab, readErrorDialog, sandbox, until } from "./helpers.mjs";
 
 const { check, finish } = checker("E2E configurações");
 const sb = sandbox("settings");
@@ -80,8 +80,7 @@ await dialog.getByRole("button", { name: "Fechar" }).click();
 
 await win.locator("li.file").filter({ hasText: "a.txt" }).click({ button: "right" });
 await win.getByRole("menu").getByRole("menuitem", { name: "Abrir no editor" }).click();
-await win.locator('[role="alert"]').filter({ hasText: "não encontrado" }).waitFor();
-check("editor inexistente dá um erro claro", true);
+check("editor inexistente dá um erro claro", (await readErrorDialog(win)).includes("não encontrado"));
 
 // o tema escolhido sobrevive ao reiniciar
 await app.close();

@@ -15,6 +15,8 @@ import { CommitGraph } from "./CommitGraph";
 import { CommitPanel } from "./CommitPanel";
 import { ConflictView } from "./ConflictView";
 import { DiffView } from "./DiffView";
+import { ErrorDialog } from "./ErrorDialog";
+import { describeError } from "./errorInfo";
 import { FileHistoryView } from "./FileHistoryView";
 import { GitMonitor } from "./GitMonitor";
 import { useDialogs } from "./hooks/useDialogs";
@@ -235,11 +237,7 @@ export function RepoView({ root, active, onOpenSettings, settingsRev, repoChoice
       )}
       <AiStatus ai={ai} />
       {s.notice && <p role="status" className="notice">{s.notice}</p>}
-      {s.error && (
-        <p role="alert" className="error">
-          {s.error}
-        </p>
-      )}
+      {active && s.error && <ErrorDialog key={s.error} info={describeError(s.error)} onClose={() => s.setError(null)} />}
 
       <div
         className="workspace"

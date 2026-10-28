@@ -1,6 +1,6 @@
 // Remotas agrupadas na sidebar: adicionar, recolher, remover, renomear branch e apagar branch no remote.
 import { execFileSync } from "node:child_process";
-import { checker, dialogButton, git, initWorkWithRemote, openApp, refRow, sandbox, until, waitIdle, fetchAll } from "./helpers.mjs";
+import { checker, dialogButton, git, initWorkWithRemote, openApp, readErrorDialog, refRow, sandbox, until, waitIdle, fetchAll } from "./helpers.mjs";
 
 const { check, finish } = checker("E2E remotas");
 const sb = sandbox("remotes");
@@ -43,7 +43,7 @@ check("o novo remote aparece como grupo vazio", (await head("fork").locator(".sb
 
 // URL perigosa
 await addRemote("ruim", "--upload-pack=calc");
-await win.getByRole("alert").waitFor();
+await readErrorDialog(win);
 check("URL perigosa é recusada", !git(sb.work, "remote").split("\n").includes("ruim"));
 
 // renomear branch local pelo menu

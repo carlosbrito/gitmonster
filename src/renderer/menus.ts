@@ -100,6 +100,7 @@ export function sidebarMenu(target: SidebarTarget, a: MenuActions, current: stri
       const { name, isCurrent } = target.branch;
       return [
         { label: "Checkout", disabled: isCurrent, onSelect: () => a.branches.checkout({ kind: "local", name }) },
+        { label: `Criar branch a partir de ${name}…`, onSelect: () => a.branches.createFrom(name) },
         ...mergeEntries(name, isCurrent ? name : current, a),
         SEP,
         { label: "Renomear…", onSelect: () => a.branches.rename(name) },
@@ -113,6 +114,7 @@ export function sidebarMenu(target: SidebarTarget, a: MenuActions, current: stri
       const { name } = target.branch;
       return [
         { label: "Checkout (cria branch local)", onSelect: () => a.branches.checkout({ kind: "remote", name }) },
+        { label: `Criar branch a partir de ${name}…`, onSelect: () => a.branches.createFrom(name) },
         ...mergeEntries(name, current, a),
         SEP,
         { label: "Apagar no remote…", danger: true, onSelect: () => a.remotes.deleteRemoteBranch(target.branch.remote, name) },

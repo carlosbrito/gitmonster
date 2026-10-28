@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OpenedRepo, SessionState } from "../shared/types";
+import { ErrorDialog } from "./ErrorDialog";
+import { describeError } from "./errorInfo";
 import { RepoView } from "./RepoView";
 import { SettingsDialog } from "./SettingsDialog";
 import { MenuBar } from "./MenuBar";
@@ -147,11 +149,7 @@ export function App() {
       {active === null && (
         <>
           {notice && <p role="status" className="notice">{notice}</p>}
-          {error && (
-            <p role="alert" className="error">
-              {error}
-            </p>
-          )}
+          {error && <ErrorDialog key={error} info={describeError(error)} onClose={() => setError(null)} />}
           <StartScreen
             recents={recents}
             busy={busy || !ready}

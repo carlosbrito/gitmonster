@@ -1,5 +1,5 @@
 // Monitor de comandos git: mostra o que o app executa, esconde leituras por padrão, copia comandos.
-import { checker, commitFile, git, initWorkWithRemote, openApp, sandbox, until, waitIdle, fetchAll, createBranchViaToolbar } from "./helpers.mjs";
+import { checker, commitFile, git, initWorkWithRemote, openApp, readErrorDialog, sandbox, until, waitIdle, fetchAll, createBranchViaToolbar } from "./helpers.mjs";
 
 const { check, finish } = checker("E2E monitor de comandos git");
 const sb = sandbox("monitor");
@@ -31,6 +31,7 @@ check("o comando está marcado como concluído", (await rows.filter({ hasText: "
 await createBranchViaToolbar(win, "nova-ok");
 await waitIdle(win);
 check("comando que falha aparece com ✗ e a mensagem do git", await until(async () => (await win.locator(".gm-row.fail .gm-error").filter({ hasText: /already exists/ }).count()) >= 1));
+check("a falha também abre a modal de erro", (await readErrorDialog(win)).includes("already exists"));
 
 // credenciais não vazam
 check("nada no monitor mostra senha ou token", !(await win.locator(".gm-list").innerText()).match(/:\/\/[^/@\s]+:[^/@\s]+@/));

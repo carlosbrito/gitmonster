@@ -53,6 +53,14 @@ export function branchActions(ctx: ActionCtx) {
 
     create: (name: string) => run(() => window.gitmonster.createBranch(root, name, null, true), "all"),
 
+    /** Nova branch apontando para `base` (local ou remota, ex.: origin/x) e checkout dela. */
+    createFrom: (base: string) =>
+      void run(async () => {
+        const result = await ctx.askForm({ title: `Nova branch a partir de ${base}`, nameLabel: "Nome da branch", confirmLabel: "Criar e mudar" });
+        if (!result) return;
+        await window.gitmonster.createBranch(root, result.name, base, true);
+      }, "all"),
+
     rename: (oldName: string) =>
       void run(async () => {
         const result = await ctx.askForm({ title: `Renomear "${oldName}"`, nameLabel: "Novo nome", confirmLabel: "Renomear" });

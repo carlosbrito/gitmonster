@@ -165,6 +165,20 @@ export async function selectCommit(win, repo, hash) {
   if (!matched) throw new Error(`a seleção no grafo não corresponde ao commit esperado ${hash.slice(0, 7)}`);
 }
 
+/**
+ * Espera a modal de erro, expande os detalhes, fecha e devolve o texto visto (título, mensagem e erro completo).
+ * A modal é bloqueante: sem fechar, os próximos cliques do cenário não chegariam à tela.
+ */
+export async function readErrorDialog(win) {
+  const dialog = win.locator("dialog.error-dialog");
+  await dialog.waitFor();
+  await dialog.getByRole("button", { name: "Ver detalhes" }).click();
+  const text = await dialog.innerText();
+  await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+  await dialog.waitFor({ state: "detached" });
+  return text;
+}
+
 export const dialogButton = (win, label) => win.locator("dialog").getByRole("button", { name: label, exact: true });
 export const refRow = (win, name) => win.locator("li.ref").filter({ hasText: name }).first();
 

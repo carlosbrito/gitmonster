@@ -94,3 +94,40 @@ describe("chipTarget: etiqueta do grafo vira o alvo do menu da sidebar", () => {
     expect(chipTarget({ name: "feature", kind: "local" }, null)).toBeNull();
   });
 });
+
+describe("sidebarMenu: criar branch a partir da branch clicada", () => {
+  const createFrom = (base: string) => `Criar branch a partir de ${base}…`;
+
+  it("branch local: logo após Checkout e chama createFrom com a base", () => {
+    const { a, calls } = fakeActions();
+    const items = sidebarMenu({ kind: "branch", branch: local("dev") }, a, "master");
+    const names = labels(items);
+    expect(names.indexOf(createFrom("dev"))).toBe(names.indexOf("Checkout") + 1);
+    entry(items, createFrom("dev")).onSelect();
+    expect(calls).toEqual(["branches.createFrom(dev)"]);
+  });
+
+  it("habilitado na branch atual e com HEAD destacado", () => {
+    const { a } = fakeActions();
+    expect(entry(sidebarMenu({ kind: "branch", branch: local("master", true) }, a, "master"), createFrom("master")).disabled).toBeFalsy();
+    expect(entry(sidebarMenu({ kind: "branch", branch: local("feature") }, a, null), createFrom("feature")).disabled).toBeFalsy();
+  });
+
+  it("branch remota: logo após o checkout e usa o nome completo como base", () => {
+    const { a, calls } = fakeActions();
+    const items = sidebarMenu({ kind: "remote", branch: remote("origin/hmg02") }, a, "master");
+    const names = labels(items);
+    expect(names.indexOf(createFrom("origin/hmg02"))).toBe(names.indexOf("Checkout (cria branch local)") + 1);
+    entry(items, createFrom("origin/hmg02")).onSelect();
+    expect(calls).toEqual(["branches.createFrom(origin/hmg02)"]);
+  });
+
+  it("etiqueta do grafo também mostra o item", () => {
+    const { a } = fakeActions();
+    const refs: RefsSnapshot = { remotes: [], branches: [local("master", true)], remoteBranches: [remote("origin/Release/Master/27-10-2026")], tags: [], stashes: [] };
+    expect(labels(sidebarMenu(chipTarget({ name: "master", kind: "local" }, refs)!, a, "master"))).toContain(createFrom("master"));
+    expect(labels(sidebarMenu(chipTarget({ name: "origin/Release/Master/27-10-2026", kind: "remote" }, refs)!, a, "master"))).toContain(
+      createFrom("origin/Release/Master/27-10-2026"),
+    );
+  });
+});

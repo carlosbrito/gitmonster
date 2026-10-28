@@ -56,7 +56,7 @@ await refRow(win, "feature").click({ button: "right" });
 check("o menu diz qual branch entra em qual", (await item("Fazer merge da branch feature na branch main").count()) === 1 && (await item("Fazer rebase da branch main em cima de feature").count()) === 1);
 await item("Fazer merge da branch feature na branch main").click();
 const merged = await until(() => git(sb.work, "log", "--format=%s").includes("na feature"));
-check("menu: merge da feature na main", merged, merged ? "" : await win.locator("[role=alert]").allInnerTexts().then(String));
+check("menu: merge da feature na main", merged, merged ? "" : await win.locator("dialog.error-dialog").allInnerTexts().then(String));
 await waitIdle(win);
 
 // ----- arquivo -----

@@ -1,6 +1,6 @@
 // Tela inicial: criar repositório (git init) e clonar por URL.
 import { existsSync, mkdirSync } from "node:fs";
-import { checker, initWorkWithRemote, launchApp, sandbox, stubFolderDialog, until } from "./helpers.mjs";
+import { checker, initWorkWithRemote, launchApp, readErrorDialog, sandbox, stubFolderDialog, until } from "./helpers.mjs";
 
 const { check, finish } = checker("E2E tela inicial");
 const sb = sandbox("start");
@@ -32,15 +32,13 @@ check("clone abre uma aba", (await win.locator(".tab").count()) === 2);
 await win.getByRole("button", { name: "Nova aba" }).click();
 await win.getByLabel("URL do repositório").fill("--upload-pack=calc");
 await win.getByRole("button", { name: "Clonar…" }).click();
-await win.getByRole("alert").waitFor();
-check("URL perigosa é recusada com mensagem clara", (await win.getByRole("alert").innerText()).includes("URL inválida"));
+check("URL perigosa é recusada com mensagem clara", (await readErrorDialog(win)).includes("URL inválida"));
 check("recusar não abre aba", (await win.locator(".tab").count()) === 2);
 
 // destino já existente
 await win.getByLabel("URL do repositório").fill(`file:///${sb.remote}`);
 await win.getByRole("button", { name: "Clonar…" }).click();
-await win.getByRole("alert").filter({ hasText: "já existe" }).waitFor();
-check("não sobrescreve pasta existente", true);
+check("não sobrescreve pasta existente", (await readErrorDialog(win)).includes("já existe"));
 
 check("sem erros de console/página", errors.length === 0, JSON.stringify(errors));
 await app.close();

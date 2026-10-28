@@ -1,5 +1,5 @@
 // Pull com modo: fast-forward recusa divergência; merge e rebase integram.
-import { checker, cloneOther, commitFile, git, initWorkWithRemote, openApp, sandbox, until, waitIdle, fetchAll, setPullMode } from "./helpers.mjs";
+import { checker, cloneOther, commitFile, git, initWorkWithRemote, openApp, readErrorDialog, sandbox, until, waitIdle, fetchAll, setPullMode } from "./helpers.mjs";
 
 const { check, finish } = checker("E2E pull com modo");
 const sb = sandbox("pull");
@@ -21,8 +21,7 @@ await win.getByRole("button", { name: "Opções do Pull" }).click();
 check("o modo padrão é somente fast-forward", (await win.getByRole("menuitemradio", { name: "Somente fast-forward" }).getAttribute("aria-checked")) === "true");
 await win.keyboard.press("Escape");
 await pull.click();
-await win.getByRole("alert").waitFor();
-check("fast-forward recusa a divergência e sugere trocar o modo", (await win.getByRole("alert").innerText()).includes("modo do pull"));
+check("fast-forward recusa a divergência e sugere trocar o modo", (await readErrorDialog(win)).includes("modo do pull"));
 
 await setPullMode(win, "Merge");
 await pull.click();

@@ -715,6 +715,22 @@ dialog.settings .field input, dialog.settings .field select { width: 100%; box-s
 
 .explain { max-width: 640px; width: 90vw; }
 .explain-summary { margin: 0 0 8px; font-weight: 600; }
+.error-dialog { max-width: 640px; width: 90vw; }
+.error-command { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
+.error-command code { flex: 1; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; font-family: ui-monospace, Consolas, monospace; user-select: all; }
+.error-command button { padding: 4px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; color: inherit; cursor: pointer; }
+.error-detail {
+  max-height: 45vh;
+  margin: 0 0 12px;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 12px ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
 .explain-body { max-height: 50vh; margin: 0 0 8px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: inherit; }
 
 .conflict-ai { display: flex; gap: 6px; align-items: center; padding: 8px; }
