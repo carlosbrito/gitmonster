@@ -1,7 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { hasConflictMarkers } from "../../shared/conflict";
-import type { ConflictFile, ConflictKind, ConflictSide, FileChange } from "../../shared/types";
+import type { ConflictFile, ConflictKind, ConflictSide, FileChange, RepoStatus } from "../../shared/types";
+import { conflictSides } from "./ConflictSides";
 import { getStatus, GitError, runGit } from "./GitService";
 import { assertSafePath } from "./WorkTree";
 
@@ -31,35 +32,40 @@ function kindOf(f: FileChange): ConflictKind {
 }
 
 /** Só caminhos que o Git marca como conflitados passam: o renderer não consegue gravar em arquivo qualquer. */
-async function requireConflicted(root: string, path: string): Promise<FileChange> {
+async function findConflicted(root: string, path: string): Promise<{ file: FileChange; status: RepoStatus }> {
   const safe = assertSafePath(path);
-  const { files } = await getStatus(root);
-  const file = files.find((f) => f.conflicted && f.path === safe);
+  const status = await getStatus(root);
+  const file = status.files.find((f) => f.conflicted && f.path === safe);
   if (!file) throw new Error("Este arquivo não está em conflito.");
-  return file;
+  return { file, status };
+}
+
+async function requireConflicted(root: string, path: string): Promise<FileChange> {
+  return (await findConflicted(root, path)).file;
 }
 
 /** Lê o arquivo em conflito como o Git o deixou (com marcadores). Binário, grande ou não-UTF-8 não são editáveis. */
 export async function getConflict(root: string, path: string): Promise<ConflictFile> {
-  const file = await requireConflicted(root, path);
+  const { file, status } = await findConflicted(root, path);
   const kind = kindOf(file);
+  const base = { path: file.path, kind, operation: status.operation, sides: await conflictSides(root, status) };
   let buffer: Buffer;
   try {
     buffer = await readFile(join(root, file.path));
   } catch {
-    return { path: file.path, kind, content: "", editable: false, reason: "O arquivo não existe no disco (foi removido por um dos lados)." };
+    return { ...base, content: "", editable: false, reason: "O arquivo não existe no disco (foi removido por um dos lados)." };
   }
   if (buffer.length > MAX_BYTES) {
-    return { path: file.path, kind, content: "", editable: false, reason: "Arquivo grande demais para o editor de conflitos." };
+    return { ...base, content: "", editable: false, reason: "Arquivo grande demais para o editor de conflitos." };
   }
   const content = buffer.toString("utf8");
   if (buffer.includes(0) || !Buffer.from(content, "utf8").equals(buffer)) {
-    return { path: file.path, kind, content: "", editable: false, reason: "Arquivo binário ou fora de UTF-8: escolha uma das versões inteiras." };
+    return { ...base, content: "", editable: false, reason: "Arquivo binário ou fora de UTF-8: escolha uma das versões inteiras." };
   }
   if (!hasConflictMarkers(content)) {
-    return { path: file.path, kind, content, editable: false, reason: "Não há marcadores de conflito no arquivo: escolha uma das versões inteiras." };
+    return { ...base, content, editable: false, reason: "Não há marcadores de conflito no arquivo: escolha uma das versões inteiras." };
   }
-  return { path: file.path, kind, content, editable: true, reason: null };
+  return { ...base, content, editable: true, reason: null };
 }
 
 /** Grava o resultado montado no editor e coloca o arquivo no stage (marca como resolvido). */

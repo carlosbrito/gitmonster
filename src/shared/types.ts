@@ -222,12 +222,27 @@ export type ConflictKind =
 export type ConflictSide = "ours" | "theirs";
 
 /** Arquivo em conflito como o Git o deixou. `editable` diz se o editor de blocos serve; senão, `reason` explica. */
+/** Um lado do conflito: o nome vai em destaque (branch ou SHA curto), o detalhe é texto secundário. */
+export interface ConflictSideInfo {
+  name: string;
+  detail: string | null;
+}
+
+export interface ConflictSides {
+  ours: ConflictSideInfo;
+  theirs: ConflictSideInfo;
+}
+
 export interface ConflictFile {
   path: string;
   kind: ConflictKind;
   content: string;
   editable: boolean;
   reason: string | null;
+  /** Operação que deixou o conflito (null em conflito sem operação, ex.: stash pop). */
+  operation: Operation | null;
+  /** Quem é cada lado; null quando não dá para saber (o editor usa os rótulos dos marcadores). */
+  sides: ConflictSides | null;
 }
 
 /** Uma linha do arquivo com o commit que a escreveu por último. */

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildResult, matchLineEndings, parseConflicts, type Choice, type ConflictBlock } from "../shared/conflict";
-import type { AiConflictResult, ConflictFile, ConflictKind, ConflictSide } from "../shared/types";
+import type { AiConflictResult, ConflictFile, ConflictKind, ConflictSide, ConflictSides, Operation } from "../shared/types";
 import { errorMessage } from "./util";
 
 export interface ConflictViewProps {
@@ -38,12 +38,45 @@ const KIND_LABEL: Record<ConflictKind, string> = {
 const removesFile = (kind: ConflictKind, side: ConflictSide) =>
   kind === "deleted-by-both" || (kind === "deleted-by-us" && side === "ours") || (kind === "deleted-by-them" && side === "theirs");
 
-const CHOICES: { choice: Exclude<Choice, { custom: string }>; label: string }[] = [
-  { choice: "ours", label: "Usar nosso" },
-  { choice: "theirs", label: "Usar deles" },
+const CHOICES: { choice: Exclude<Choice, { custom: string }>; label: string; side?: ConflictSide }[] = [
+  { choice: "ours", label: "Usar nosso", side: "ours" },
+  { choice: "theirs", label: "Usar deles", side: "theirs" },
   { choice: "both-ours-first", label: "Ambos (nosso primeiro)" },
   { choice: "both-theirs-first", label: "Ambos (deles primeiro)" },
 ];
+
+const ROLE: Record<ConflictSide, string> = { ours: "nosso", theirs: "deles" };
+
+/** "Merge de X em Y": como a operação junta os dois lados. */
+const CONTEXT: Record<Operation, [string, string]> = {
+  merge: ["Merge de", "em"],
+  "cherry-pick": ["Cherry-pick de", "em"],
+  revert: ["Revert de", "em"],
+  rebase: ["Rebase de", "sobre"],
+};
+
+/** Título do painel: nome da branch/commit em destaque; sem nomes, o rótulo do marcador como antes. */
+function SideTitle({ side, sides, label }: { side: ConflictSide; sides: ConflictSides | null; label: string }) {
+  const info = sides?.[side];
+  if (!info) {
+    return (
+      <h4>
+        {side === "ours" ? "Nosso" : "Deles"} {label && <span className="dim">({label})</span>}
+      </h4>
+    );
+  }
+  return (
+    <h4 className="conflict-side-title">
+      <span className="conflict-side-name" title={info.name}>
+        {info.name}
+      </span>
+      <span className="dim">
+        {ROLE[side]}
+        {info.detail ? ` · ${info.detail}` : ""}
+      </span>
+    </h4>
+  );
+}
 
 export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSide, aiReason, onAiResolve }: ConflictViewProps) {
   const [file, setFile] = useState<ConflictFile | null>(null);
@@ -92,6 +125,9 @@ export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSi
   };
 
   const aiBlocked = aiReason ?? (file?.editable ? null : "Este arquivo não pode ser resolvido com IA (binário, grande demais ou sem marcadores).");
+  const sides = file?.sides ?? null;
+  /** "Arquivo inteiro: nosso (main)". */
+  const wholeLabel = (side: ConflictSide) => `Arquivo inteiro: ${ROLE[side]}${sides ? ` (${sides[side].name})` : ""}`;
 
   return (
     <div className="diff conflict">
@@ -100,6 +136,17 @@ export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSi
         <strong>{path}</strong>
         <span className="dim">conflito{file ? `: ${KIND_LABEL[file.kind]}` : ""}</span>
       </header>
+      {sides && file?.operation && (
+        <div className="conflict-context">
+          <span>
+            {CONTEXT[file.operation][0]} <strong className="conflict-name theirs">{sides.theirs.name}</strong> {CONTEXT[file.operation][1]}{" "}
+            <strong className="conflict-name ours">{sides.ours.name}</strong>
+          </span>
+          {file.operation === "rebase" && (
+            <span className="dim">No rebase, “nosso” é a base e “deles” são os seus commits sendo reaplicados.</span>
+          )}
+        </div>
+      )}
 
       <div className="diff-body">
         {error && <p role="alert" className="error">{error}</p>}
@@ -110,7 +157,7 @@ export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSi
             <p className="pad">{file.reason}</p>
             {(["ours", "theirs"] as const).map((side) => (
               <button key={side} disabled={busy} onClick={() => onResolveSide(side)}>
-                Arquivo inteiro: {side === "ours" ? "nosso" : "deles"}
+                {wholeLabel(side)}
                 {removesFile(file.kind, side) ? " (remove o arquivo)" : ""}
               </button>
             ))}
@@ -143,7 +190,7 @@ export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSi
                 </div>
                 <div className="conflict-sides">
                   <div className="conflict-side ours">
-                    <h4>Nosso {block.oursLabel && <span className="dim">({block.oursLabel})</span>}</h4>
+                    <SideTitle side="ours" sides={sides} label={block.oursLabel} />
                     <pre>{block.ours || "(vazio)"}</pre>
                   </div>
                   {block.base !== null && (
@@ -153,13 +200,19 @@ export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSi
                     </div>
                   )}
                   <div className="conflict-side theirs">
-                    <h4>Deles {block.theirsLabel && <span className="dim">({block.theirsLabel})</span>}</h4>
+                    <SideTitle side="theirs" sides={sides} label={block.theirsLabel} />
                     <pre>{block.theirs || "(vazio)"}</pre>
                   </div>
                 </div>
                 <div className="conflict-choices">
-                  {CHOICES.map(({ choice: c, label }) => (
-                    <button key={c} aria-pressed={choice === c} disabled={busy} onClick={() => choose(block.id, c)}>
+                  {CHOICES.map(({ choice: c, label, side }) => (
+                    <button
+                      key={c}
+                      aria-pressed={choice === c}
+                      disabled={busy}
+                      title={side && sides ? `Usar ${sides[side].name}` : undefined}
+                      onClick={() => choose(block.id, c)}
+                    >
                       {label}
                     </button>
                   ))}
@@ -200,7 +253,7 @@ export function ConflictView({ root, path, busy, onClose, onResolve, onResolveSi
               </button>
               {(["ours", "theirs"] as const).map((side) => (
                 <button key={side} className="link" disabled={busy} onClick={() => onResolveSide(side)}>
-                  Arquivo inteiro: {side === "ours" ? "nosso" : "deles"}
+                  {wholeLabel(side)}
                 </button>
               ))}
             </div>

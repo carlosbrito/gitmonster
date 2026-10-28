@@ -136,6 +136,77 @@ describe("conflitos com git real", () => {
     expect(read("a.txt")).toBe("linha 1\nmudou na feature\nlinha 3\n");
   });
 
+  describe("nome de cada lado", () => {
+    /** feature e main editam a linha 2; devolve o SHA curto do commit da feature. */
+    function divergent() {
+      git("switch", "-c", "feature");
+      write("a.txt", "linha 1\ndeles\nlinha 3\n");
+      commitAll("muda na feature");
+      git("switch", "main");
+      write("a.txt", "linha 1\nnosso\nlinha 3\n");
+      commitAll("main");
+      return git("rev-parse", "--short", "feature");
+    }
+
+    it("merge de branch local", async () => {
+      conflictOnA();
+      const c = await getConflict(dir, "a.txt");
+      expect(c.operation).toBe("merge");
+      expect(c.sides).toEqual({ ours: { name: "main", detail: null }, theirs: { name: "feature", detail: null } });
+    });
+
+    it("merge de ref remota usa o nome que foi mesclado", async () => {
+      divergent();
+      git("update-ref", "refs/remotes/origin/Feature/x", "feature");
+      git("switch", "-c", "apresentacao");
+      tryGit("merge", "origin/Feature/x");
+      const c = await getConflict(dir, "a.txt");
+      expect(c.sides?.ours.name).toBe("apresentacao");
+      expect(c.sides?.theirs.name).toBe("origin/Feature/x");
+    });
+
+    it("cherry-pick", async () => {
+      const hash = divergent();
+      tryGit("cherry-pick", "feature");
+      const c = await getConflict(dir, "a.txt");
+      expect(c.operation).toBe("cherry-pick");
+      expect(c.sides).toEqual({ ours: { name: "main", detail: null }, theirs: { name: hash, detail: "muda na feature" } });
+    });
+
+    it("revert", async () => {
+      write("a.txt", "linha 1\nmeio\nlinha 3\n");
+      commitAll("muda o meio");
+      const hash = git("rev-parse", "--short", "HEAD");
+      write("a.txt", "linha 1\nde novo\nlinha 3\n");
+      commitAll("muda de novo");
+      tryGit("revert", "--no-edit", hash);
+      const c = await getConflict(dir, "a.txt");
+      expect(c.operation).toBe("revert");
+      expect(c.sides?.theirs).toEqual({ name: hash, detail: "revertendo: muda o meio" });
+    });
+
+    it("rebase: nosso é a base, deles a branch rebaseada", async () => {
+      const hash = divergent();
+      git("switch", "feature");
+      tryGit("rebase", "main");
+      const c = await getConflict(dir, "a.txt");
+      expect(c.operation).toBe("rebase");
+      expect(c.sides).toEqual({ ours: { name: "main", detail: "base do rebase" }, theirs: { name: "feature", detail: `${hash} muda na feature` } });
+    });
+
+    it("stash pop sem operação: sides null", async () => {
+      write("a.txt", "linha 1\nstash\nlinha 3\n");
+      git("stash");
+      write("a.txt", "linha 1\ncommit\nlinha 3\n");
+      commitAll("depois do stash");
+      tryGit("stash", "pop");
+      const c = await getConflict(dir, "a.txt");
+      expect(c.operation).toBeNull();
+      expect(c.sides).toBeNull();
+      expect(c.editable).toBe(true);
+    });
+  });
+
   it("arquivo binário não é editável pelo editor de blocos", async () => {
     git("switch", "-c", "feature");
     writeFileSync(join(dir, "i.bin"), Buffer.from([0, 1, 2, 3]));

@@ -458,6 +458,13 @@ body {
 .conflict-sides { display: flex; gap: 8px; padding: 8px; }
 .conflict-side { flex: 1; min-width: 0; }
 .conflict-side h4, .conflict-result h4 { margin: 0 0 4px; font-size: 12px; }
+.conflict-side-title { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.conflict-side-title .dim { flex: none; font-weight: normal; }
+.conflict-side-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.conflict-side.ours .conflict-side-name, .conflict-name.ours { color: rgb(46, 160, 67); }
+.conflict-side.theirs .conflict-side-name, .conflict-name.theirs { color: rgb(79, 140, 255); }
+.conflict-context { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.conflict-name { word-break: break-all; }
 .conflict-side pre, .conflict-result pre {
   margin: 0;
   padding: 6px 8px;

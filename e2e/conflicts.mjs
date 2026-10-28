@@ -36,6 +36,11 @@ await win.locator('button.file-open[title="a.txt"]').click();
 const blocks = win.locator(".conflict-block");
 await blocks.nth(1).waitFor();
 check("dois blocos de conflito", (await blocks.count()) === 2);
+const firstTitles = blocks.nth(0).locator(".conflict-side-name");
+check("o painel nosso mostra a branch atual", (await firstTitles.nth(0).innerText()) === "main");
+check("o painel deles mostra a branch mesclada", (await firstTitles.nth(1).innerText()) === "feature");
+check("a barra mostra a operação com os dois lados", (await win.locator(".conflict-context").innerText()).includes("Merge de feature em main"));
+check("o botão do bloco diz qual branch usa", (await blocks.nth(0).getByRole("button", { name: "Usar nosso" }).getAttribute("title")) === "Usar main");
 check("salvar começa desabilitado", await win.getByRole("button", { name: "Salvar resolução" }).isDisabled());
 
 await blocks.nth(0).getByRole("button", { name: "Usar nosso" }).click();
@@ -54,7 +59,7 @@ await waitIdle(win);
 // ----- b.txt: removido por nós, modificado por eles -----
 await win.locator('button.file-open[title="b.txt"]').click();
 await win.getByText(/removido por nós/).waitFor();
-const removing = win.getByRole("button", { name: /Arquivo inteiro: nosso \(remove o arquivo\)/ });
+const removing = win.getByRole("button", { name: /Arquivo inteiro: nosso \(main\) \(remove o arquivo\)/ });
 check("o editor avisa que o lado escolhido remove o arquivo", (await removing.count()) === 1);
 await removing.click();
 check("b.txt é removido e deixa de ser conflito", await until(() => !existsSync(`${sb.work}/b.txt`) && !git(sb.work, "status", "--porcelain").includes("UD")));
